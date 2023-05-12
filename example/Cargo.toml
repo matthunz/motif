@@ -1,0 +1,12 @@
+[package]
+authors = ["Matt Hunzinger <matthunz2@gmail.com>"]
+name = "motif-example"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "maturin_starter"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.18.3", features = ["extension-module"] }

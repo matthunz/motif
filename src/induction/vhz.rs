@@ -1,13 +1,63 @@
-use super::{DefaultSpeed, Speed};
 use crate::{abc_to_complex, Pwm, RateLimiter};
 use num::{complex::Complex32, Zero};
 use std::f32::consts::PI;
 
-/// V/Hz control for induction motor drives.
-pub struct InductionMotorVhzControl<T = DefaultSpeed> {
-    // Speed reference (in electrical rad/s).
-    pub w_m_ref: T,
+pub struct Builder {
+    r_r: f32,
+    l_m: f32,
+    l_sgm: f32,
+}
 
+impl Default for Builder {
+    fn default() -> Self {
+        Self {
+            r_r: 2.1,
+            l_m: 0.224,
+            l_sgm: 0.21,
+        }
+    }
+}
+
+impl Builder {
+    pub fn r_r(mut self, r_r: f32) -> Self {
+        self.r_r = r_r;
+        self
+    }
+
+    pub fn l_m(mut self, l_m: f32) -> Self {
+        self.l_m = l_m;
+        self
+    }
+    pub fn l_sgm(mut self, l_sgm: f32) -> Self {
+        self.l_sgm = l_sgm;
+        self
+    }
+
+    pub fn build(self) -> InductionMotorVhzControl {
+        let w_rb = self.r_r * (self.l_m + self.l_sgm) / (self.l_sgm * self.l_m);
+
+        InductionMotorVhzControl {
+            i_s_ref: Complex32::zero(),
+            psi_s_ref: Complex32::new(1.04, 1.), // 1 p.u
+            l_sgm: self.l_sgm,
+            r_r: self.r_r,
+            k_w: Complex32::new(4., 1.),
+            w_r_ref: Complex32::zero(),
+            rate_limiter: RateLimiter::new(2. * PI * 120.),
+            theta_s: 0.,
+            pwm: Pwm::default(),
+            l_m: self.l_m,
+            k_u: 1.,
+            r_s: 3.7,
+            alpha_i: 0.1 * w_rb,
+            alpha_f: 0.1 * w_rb,
+            t: 0.,
+        }
+    }
+}
+
+/// V/Hz control for induction motor drives.
+pub struct InductionMotorVhzControl {
     /// Frequency reference rate limiter.
     pub rate_limiter: RateLimiter,
 
@@ -30,53 +80,30 @@ pub struct InductionMotorVhzControl<T = DefaultSpeed> {
     pub t: f32,
 }
 
-impl Default for InductionMotorVhzControl<DefaultSpeed> {
+impl Default for InductionMotorVhzControl {
     fn default() -> Self {
-        let r_r = 2.1;
-        let l_m = 0.224;
-        let l_sgm = 0.21;
-        let w_rb = r_r * (l_m + l_sgm) / (l_sgm * l_m);
-
-        Self {
-            w_m_ref: DefaultSpeed,
-            i_s_ref: Complex32::zero(),
-            psi_s_ref: Complex32::new(1.04, 1.), // 1 p.u
-            l_sgm,
-            r_r,
-            k_w: Complex32::new(4., 1.),
-            w_r_ref: Complex32::zero(),
-            rate_limiter: RateLimiter::new(2. * PI * 120.),
-            theta_s: 0.,
-            pwm: Pwm::default(),
-            l_m,
-            k_u: 1.,
-            r_s: 3.7,
-            alpha_i: 0.1 * w_rb,
-            alpha_f: 0.1 * w_rb,
-            t: 0.,
-        }
+        Self::builder().build()
     }
 }
 
-impl<T> InductionMotorVhzControl<T>
-where
-    T: Speed,
-{
+impl InductionMotorVhzControl {
+    pub fn builder() -> Builder {
+        Builder::default()
+    }
+
     /// Calculate the 3-phase PWM duty cycle ratios to control the motor.
     /// Arguments:
     /// `i_i_abc`: Phase currents of the motor.
     /// `u_dc`: DC-bus voltage.
+    /// `w_m_ref`:Speed reference (in electrical rad/s).
     /// `t`: Current time (in seconds).
-    pub fn control(&mut self, i_s_abc: [f32; 3], u_dc: f32, t: f32) -> [f32; 3]
-    where
-        T: FnMut(f32) -> f32,
-    {
+    pub fn control(&mut self, i_s_abc: [f32; 3], u_dc: f32, w_m_ref: f32, t: f32) -> [f32; 3] {
         // Calculate the sampling frequency
         let t_s = t - self.t;
         self.t = t;
 
         // Rate limit the frequency reference
-        let w_m_ref = self.rate_limiter.rate_limit(t_s, (self.w_m_ref)(t));
+        let w_m_ref = self.rate_limiter.rate_limit(t_s, w_m_ref);
 
         // Space vector transformation
         let i_s = (-1. * self.theta_s).exp() * abc_to_complex(i_s_abc);
