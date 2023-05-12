@@ -97,6 +97,25 @@ impl<T> InductionMotorVhzControl<T>
 where
     T: Speed,
 {
+    /// Calculate the stator the dynamic stator frequency (used in the coordinate transformations).
+    pub fn stator_freq(&self, i_s: Complex32, w_s_ref: Complex32) -> [Complex32; 2] {
+        // Operating-point quantities
+        let psi_r_ref = self.psi_s_ref - self.l_sgm * self.i_s_ref;
+        let psi_r_ref_sqr = psi_r_ref.powi(2);
+
+        // Compute the dynamic stator frequency
+        if psi_r_ref_sqr.re > 0. {
+            // Slip estimate based on the measured current
+            let w_r = self.r_r * (i_s * psi_r_ref.conj()).im / psi_r_ref_sqr;
+            // Dynamic frequency
+            let w_s = w_s_ref + self.k_w * (self.w_r_ref - w_r);
+
+            [w_s, w_r]
+        } else {
+            [Complex32::zero(); 2]
+        }
+    }
+
     /// Calculate the stator voltage reference.
     pub fn voltage_reference(&self, w_s: Complex32, i_s: f32) -> Complex32 {
         // Nominal magnetizing current
