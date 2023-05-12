@@ -8,16 +8,20 @@ use std::f32::consts::PI;
 /// This contains the computation of the duty ratio references and the realized voltage.
 /// The digital delay effects are taken into account in the realized voltage.
 pub struct Pwm {
-    t_s: f32,
     is_six_step: bool,
     realized_voltage: Complex32,
     u_ref_lim_old: Complex32,
 }
 
+impl Default for Pwm {
+    fn default() -> Self {
+        Self::new(false)
+    }
+}
+
 impl Pwm {
-    pub fn new(t_s: f32, is_six_step: bool) -> Self {
+    pub fn new(is_six_step: bool) -> Self {
         Self {
-            t_s,
             is_six_step,
             realized_voltage: Zero::zero(),
             u_ref_lim_old: Zero::zero(),
@@ -30,17 +34,31 @@ impl Pwm {
     /// `u_dc` : DC-bus voltage.
     /// theta : Angle of synchronous coordinates.
     /// w : Angular speed of synchronous coordinates.
-    pub fn duty_ratios(&mut self, u_ref: Complex32, u_dc: f32, theta: f32, w: f32) -> [f32; 3] {
-        let (d_abc_ref, u_ref_lim) = self.output(u_ref, u_dc, theta, w);
+    pub fn duty_ratios(
+        &mut self,
+        t_s: f32,
+        u_ref: Complex32,
+        u_dc: f32,
+        theta: f32,
+        w: f32,
+    ) -> [f32; 3] {
+        let (d_abc_ref, u_ref_lim) = self.output(t_s, u_ref, u_dc, theta, w);
         self.update(u_ref_lim);
 
         d_abc_ref
     }
 
     /// Calculate the duty ratio limited voltage reference.
-    pub fn output(&self, u_ref: Complex32, u_dc: f32, theta: f32, w: f32) -> ([f32; 3], Complex32) {
+    pub fn output(
+        &self,
+        t_s: f32,
+        u_ref: Complex32,
+        u_dc: f32,
+        theta: f32,
+        w: f32,
+    ) -> ([f32; 3], Complex32) {
         //  Advance the angle due to the computational delay (T_s) and the ZOH (PWM) delay (0.5*T_s)
-        let theta_comp = theta + 1.5 * self.t_s * w;
+        let theta_comp = theta + 1.5 * t_s * w;
 
         // Voltage reference in stator coordinates
         let mut u_s_ref = theta_comp.exp() * u_ref;
