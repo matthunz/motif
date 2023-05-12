@@ -59,8 +59,8 @@ pub struct InductionMotorVhzControl<T = DefaultSpeed> {
     /// Sampling period (s)
     pub t_s: f32,
 
-    /// Current time (s)
-    pub t: f32,
+    /// Time at which the clock is reset
+    pub t_reset: f32,
 }
 
 impl Default for InductionMotorVhzControl<DefaultSpeed> {
@@ -88,7 +88,7 @@ impl Default for InductionMotorVhzControl<DefaultSpeed> {
             alpha_i: 0.1 * w_rb,
             alpha_f: 0.1 * w_rb,
             t_s,
-            t: 0.,
+            t_reset: 1e9,
         }
     }
 }
@@ -97,6 +97,46 @@ impl<T> InductionMotorVhzControl<T>
 where
     T: Speed,
 {
+    /// Calculate the 3-phase PWM duty cycle ratios to control the motor.
+    /// Arguments:
+    /// `i_i_abc`: Phase currents of the motor.
+    /// `u_dc`: DC-bus voltage.
+    /// `t`: Current time (in seconds).
+    pub fn control(&mut self, i_s_abc: [f32; 3], u_dc: f32, t: f32) -> [f32; 3]
+    where
+        T: FnMut(f32) -> f32,
+    {
+        // Rate limit the frequency reference
+        let w_m_ref = self.rate_limiter.rate_limit(self.t_s, (self.w_m_ref)(t));
+
+        // Space vector transformation
+        let i_s = (-1. * self.theta_s).exp() * abc2complex(i_s_abc);
+
+        // Slip compensation
+        let w_s_ref = w_m_ref + self.w_r_ref;
+
+        // Dynamic stator frequency and slip frequency
+        let [w_s, w_r] = self.stator_freq(w_s_ref, i_s.into());
+
+        // Voltage reference
+        let u_s_ref = self.voltage_reference(w_s, i_s);
+
+        // Compute the duty ratios
+        let d_abc_ref = self
+            .pwm
+            .duty_ratios(self.t_s, u_s_ref, u_dc, self.theta_s, w_s.re);
+
+        // Update the states
+        self.i_s_ref += self.t_s * self.alpha_i * (i_s - self.i_s_ref);
+        self.w_r_ref += self.t_s * self.alpha_f * (w_r - self.w_r_ref);
+
+        // Next line: limit into [-pi, pi)
+        self.theta_s += (self.t_s * w_s).re;
+        self.theta_s = (self.theta_s + PI) % (2. * PI) - PI;
+
+        d_abc_ref
+    }
+
     /// Calculate the stator the dynamic stator frequency (used in the coordinate transformations).
     pub fn stator_freq(&self, i_s: Complex32, w_s_ref: Complex32) -> [Complex32; 2] {
         // Operating-point quantities
@@ -130,4 +170,16 @@ where
 
         self.r_s * i_s_ref0 + 1. * w_s * self.psi_s_ref + k * (self.i_s_ref - i_s)
     }
+}
+
+fn complex_to_abc(u: Complex32) -> [f32; 3] {
+    [
+        u.re,
+        0.5 * (-u.re + 3f32.sqrt() * u.im),
+        0.5 * (-u.re - 3f32.sqrt() * u.im),
+    ]
+}
+
+fn abc2complex(u: [f32; 3]) -> f32 {
+    (2. / 3.) * u[0] - (u[1] + u[2]) / 3. + 1. * (u[1] - u[2]) / 3f32.sqrt()
 }

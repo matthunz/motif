@@ -1,3 +1,4 @@
+use crate::{abc2complex, complex_to_abc};
 use num::{
     complex::{Complex32, ComplexFloat},
     Zero,
@@ -141,16 +142,4 @@ pub fn duty_ratios(u_s_ref: Complex32, u_dc: f32) -> [f32; 3] {
         u_abc[1] / u_dc + 0.5,
         u_abc[2] / u_dc + 0.5,
     ]
-}
-
-fn complex_to_abc(u: Complex32) -> [f32; 3] {
-    [
-        u.re,
-        0.5 * (-u.re + 3f32.sqrt() * u.im),
-        0.5 * (-u.re - 3f32.sqrt() * u.im),
-    ]
-}
-
-fn abc2complex(u: [f32; 3]) -> f32 {
-    (2. / 3.) * u[0] - (u[1] + u[2]) / 3. + 1. * (u[1] - u[2]) / 3f32.sqrt()
 }
