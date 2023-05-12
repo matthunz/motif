@@ -92,3 +92,23 @@ impl Default for InductionMotorVhzControl<DefaultSpeed> {
         }
     }
 }
+
+impl<T> InductionMotorVhzControl<T>
+where
+    T: Speed,
+{
+    /// Calculate the stator voltage reference.
+    pub fn voltage_reference(&self, w_s: Complex32, i_s: f32) -> Complex32 {
+        // Nominal magnetizing current
+        let i_sd_nom = self.psi_s_ref / (self.l_m + self.l_sgm);
+
+        // Operating-point current for RI compensation
+        let i_s_ref0 = i_sd_nom + Complex32::new(1., self.i_s_ref.im);
+
+        // Term -R_s omitted to avoid problems due to the voltage saturation
+        // k = -R_s + k_u*L_sgm*(alpha + 1j*w_m0)
+        let k = self.k_u * self.l_sgm * (self.r_r / self.l_m + 1. * w_s);
+
+        self.r_s * i_s_ref0 + 1. * w_s * self.psi_s_ref + k * (self.i_s_ref - i_s)
+    }
+}
