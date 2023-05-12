@@ -1,4 +1,4 @@
-use crate::{abc2complex, complex_to_abc};
+use crate::{abc_to_complex, complex_to_abc};
 use num::{
     complex::{Complex32, ComplexFloat},
     Zero,
@@ -73,7 +73,7 @@ impl Pwm {
         let d_abc_ref = duty_ratios(u_s_ref, u_dc);
 
         // Realizable voltage
-        let u_s_ref_lim = abc2complex(d_abc_ref) * u_dc;
+        let u_s_ref_lim = abc_to_complex(d_abc_ref) * u_dc;
         let u_ref_lim = (-1. * theta_comp).exp() * u_s_ref_lim;
 
         (d_abc_ref, u_ref_lim.into())
