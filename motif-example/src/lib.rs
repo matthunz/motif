@@ -14,9 +14,11 @@ struct ExampleClass {
 impl ExampleClass {
     #[new]
     pub fn new() -> Self {
-        ExampleClass {
-            control: InductionMotorVhzControl::default(),
-        }
+        let mut control = InductionMotorVhzControl::builder().r_r(0.).build();
+        control.r_s = 0.;
+        control.k_u = 0.;
+        control.k_w = Default::default();
+        ExampleClass { control }
     }
 
     pub fn control(
@@ -26,7 +28,6 @@ impl ExampleClass {
         w_m_ref: f32,
         t: f32,
     ) -> (f32, [f32; 3]) {
-        dbg!(t);
         self.control.control(i_s_abc, u_dc, w_m_ref, t)
     }
 }

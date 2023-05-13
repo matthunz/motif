@@ -13,8 +13,12 @@ class Control(mt.InductionMotorVHzCtrl):
         super().__init__(mt.InductionMotorVHzCtrlPars(R_s=0, R_R=0, k_u=0, k_w=0))
 
     def __call__(self, mdl):
-        a, b = self.controller.control(mdl.motor.meas_currents(), mdl.conv.meas_dc_voltage(), 0, mdl.t0)
+        w_m_ref = (mdl.t0 > .2)*(1.*base.w)
+        a, b = self.controller.control(mdl.motor.meas_currents(), mdl.conv.meas_dc_voltage(), w_m_ref, mdl.t0)
         c, d =  super().__call__(mdl)
+
+        # print([a, b])
+        # print([c, d])
 
         return [c, b]
 
