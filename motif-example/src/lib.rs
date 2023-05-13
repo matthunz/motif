@@ -1,3 +1,4 @@
+use motif::induction::InductionMotorVhzControl;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::wrap_pymodule;
@@ -6,15 +7,27 @@ mod submodule;
 
 #[pyclass]
 struct ExampleClass {
-    #[pyo3(get, set)]
-    value: i32,
+    control: InductionMotorVhzControl,
 }
 
 #[pymethods]
 impl ExampleClass {
     #[new]
-    pub fn new(value: i32) -> Self {
-        ExampleClass { value }
+    pub fn new() -> Self {
+        ExampleClass {
+            control: InductionMotorVhzControl::default(),
+        }
+    }
+
+    pub fn control(
+        &mut self,
+        i_s_abc: [f32; 3],
+        u_dc: f32,
+        w_m_ref: f32,
+        t: f32,
+    ) -> (f32, [f32; 3]) {
+        dbg!(t);
+        self.control.control(i_s_abc, u_dc, w_m_ref, t)
     }
 }
 

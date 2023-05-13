@@ -1,39 +1,23 @@
-"""
-V/Hz control: 2.2-kW induction motor
-====================================
-
-A diode bridge, stiff three-phase grid, and a DC link is modeled. The default
-parameters correspond to open-loop V/Hz control. Magnetic saturation of the 
-motor is also modeled.
-
-"""
-# %%
-# Import the package.
-
 from time import time
 import numpy as np
 import motulator as mt
-
-# %%
-# Compute base values based on the nominal values (just for figures).
+from maturin_starter import ExampleClass
 
 base = mt.BaseValues(
     U_nom=400, I_nom=5, f_nom=50, tau_nom=14.6, P_nom=2.2e3, n_p=2)
 
-# %%
-# The main-flux saturation model is created based on [1]_. For simplicity, the
-# parameters are hard-coded in the function below, but this model structure can
-# be used also for other induction motors.
-
 
 class Control(mt.InductionMotorVHzCtrl):
     def __init__(self):
+        self.controller = ExampleClass();
         super().__init__(mt.InductionMotorVHzCtrlPars(R_s=0, R_R=0, k_u=0, k_w=0))
 
     def __call__(self, mdl):
-        return super().__call__(mdl)
+        a, b = self.controller.control(mdl.motor.meas_currents(), mdl.conv.meas_dc_voltage(), 0, mdl.t0)
+        c, d =  super().__call__(mdl)
 
-    
+        return [c, b]
+
 
 def L_s(psi):
     """
@@ -95,25 +79,5 @@ t_start = time()  # Start the timer
 sim.simulate(t_stop=1.5)
 print(f'\nExecution time: {(time() - t_start):.2f} s')
 
-# %%
-# Plot results in per-unit values.
-#
-# .. note::
-#    The DC link of this particular example is actually unstable at 1-p.u.
-#    speed at the rated load torque, since the inverter looks like a negative
-#    resistance to the DC link. You could notice this instability if simulating
-#    a longer period (e.g. set `t_stop=2`). For more information, see e.g. [2]_.
-
-# sphinx_gallery_thumbnail_number = 2
 mt.plot(sim, base=base)
 mt.plot_extra(sim, t_span=(1.1, 1.125), base=base)
-
-# %%
-# References
-# ----------
-# .. [1] Qu, Ranta, Hinkkanen, Luomi, "Loss-minimizing flux level control of
-#    induction motor drives," IEEE Trans. Ind. Appl., 2012,
-#    https://doi.org/10.1109/TIA.2012.2190818
-# .. [2] Hinkkanen, Harnefors, Luomi, "Control of induction motor drives
-#    equipped with small DC-Link capacitance," Proc. EPE, 2007,
-#    https://doi.org/10.1109/EPE.2007.4417763

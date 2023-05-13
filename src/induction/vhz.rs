@@ -97,7 +97,13 @@ impl InductionMotorVhzControl {
     /// `u_dc`: DC-bus voltage.
     /// `w_m_ref`:Speed reference (in electrical rad/s).
     /// `t`: Current time (in seconds).
-    pub fn control(&mut self, i_s_abc: [f32; 3], u_dc: f32, w_m_ref: f32, t: f32) -> [f32; 3] {
+    pub fn control(
+        &mut self,
+        i_s_abc: [f32; 3],
+        u_dc: f32,
+        w_m_ref: f32,
+        t: f32,
+    ) -> (f32, [f32; 3]) {
         // Calculate the sampling frequency
         let t_s = t - self.t;
         self.t = t;
@@ -130,7 +136,7 @@ impl InductionMotorVhzControl {
         self.theta_s += (t_s * w_s).re;
         self.theta_s = (self.theta_s + PI) % (2. * PI) - PI;
 
-        d_abc_ref
+        (t_s, d_abc_ref)
     }
 
     /// Calculate the stator the dynamic stator frequency (used in the coordinate transformations).
