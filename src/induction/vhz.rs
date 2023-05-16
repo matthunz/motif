@@ -63,17 +63,39 @@ pub struct InductionMotorVhzControl {
 
     /// PWM duty cycle control.
     pub pwm: Pwm,
+
+    /// Reference stator current
     pub i_s_ref: Complex32,
+
+    /// Reference stator flux
     pub psi_s_ref: Complex32,
+
+    /// Stator inductance
     pub l_sgm: f32,
-    pub r_r: f32,
+
     pub k_w: Complex32,
-    pub w_r_ref: Complex32,
-    pub theta_s: f32,
-    pub l_m: f32,
+
     pub k_u: f32,
+
+    /// Reference rotor speed
+    pub w_r_ref: Complex32,
+
+    /// Angle of stator flux
+    pub theta_s: f32,
+
+    /// Magnetizing inductance
+    pub l_m: f32,
+
+    /// Stator resistance
     pub r_s: f32,
+
+    /// Rotor resistance
+    pub r_r: f32,
+
+    /// Proportional gain for the stator current controller.
     pub alpha_i: f32,
+
+    /// Proportional gain for the stator flux controller.
     pub alpha_f: f32,
 
     // Last recorded time
@@ -95,7 +117,7 @@ impl InductionMotorVhzControl {
     /// Arguments:
     /// `i_i_abc`: Phase currents of the motor.
     /// `u_dc`: DC-bus voltage.
-    /// `w_m_ref`:Speed reference (in electrical rad/s).
+    /// `w_m_ref`: Speed reference (in electrical rad/s).
     /// `t`: Current time (in seconds).
     pub fn control(
         &mut self,

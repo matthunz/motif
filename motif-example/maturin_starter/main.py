@@ -14,11 +14,16 @@ class Control(mt.InductionMotorVHzCtrl):
 
     def __call__(self, mdl):
         w_m_ref = (mdl.t0 > .2)*(1.*base.w)
-        a, b = self.controller.control(mdl.motor.meas_currents(), mdl.conv.meas_dc_voltage(), w_m_ref, mdl.t0)
+
+         # Measure the feedback signals
+        i_s_abc = mdl.motor.meas_currents()  # Phase currents
+        u_dc = mdl.conv.meas_dc_voltage()  # DC-bus voltage
+
+        a, b = self.controller.control(i_s_abc, u_dc, w_m_ref, mdl.t0)
         c, d =  super().__call__(mdl)
 
-        # print([a, b])
-        # print([c, d])
+        print([a, b])
+        print([c, d])
 
         return [c, b]
 
