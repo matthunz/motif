@@ -118,54 +118,6 @@ impl InductionMotorVhzControl {
         Builder::default()
     }
 
-    /// Calculate the 3-phase PWM duty cycle ratios to control the motor.
-    /// Arguments:
-    /// `i_i_abc`: Phase currents of the motor.
-    /// `u_dc`: DC-bus voltage.
-    /// `w_m_ref`: Speed reference (in electrical rad/s).
-    /// `t`: Current time (in seconds).
-    pub fn control(
-        &mut self,
-        i_s_abc: [f32; 3],
-        u_dc: f32,
-        w_m_ref: f32,
-        t: f32,
-    ) -> (f32, [f32; 3]) {
-        // Calculate the sampling frequency
-        let t_s = t - self.t;
-        self.t = t;
-
-        // Rate limit the frequency reference
-        let w_m_ref = self.rate_limiter.rate_limit(t_s, w_m_ref);
-
-        // Space vector transformation
-        let i_s = Float::exp(-1. * self.theta_s) * abc_to_complex(i_s_abc);
-
-        // Slip compensation
-        let w_s_ref = w_m_ref + self.w_r_ref;
-
-        // Dynamic stator frequency and slip frequency
-        let [w_s, w_r] = self.stator_freq(w_s_ref, i_s.into());
-
-        // Voltage reference
-        let u_s_ref = self.voltage_reference(w_s, i_s);
-
-        // Compute the duty ratios
-        let d_abc_ref = self
-            .pwm
-            .duty_ratios(t_s, u_s_ref, u_dc, self.theta_s, w_s.re);
-
-        // Update the states
-        self.i_s_ref += t_s * self.alpha_i * (i_s - self.i_s_ref);
-        self.w_r_ref += t_s * self.alpha_f * (w_r - self.w_r_ref);
-
-        // Next line: limit into [-pi, pi)
-        self.theta_s += (t_s * w_s).re;
-        self.theta_s = (self.theta_s + PI) % (2. * PI) - PI;
-
-        (t_s, d_abc_ref)
-    }
-
     /// Calculate the stator the dynamic stator frequency (used in the coordinate transformations).
     pub fn stator_freq(&self, w_s_ref: Complex32, i_s: Complex32) -> [Complex32; 2] {
         // Operating-point quantities
@@ -202,9 +154,38 @@ impl InductionMotorVhzControl {
 }
 
 impl<M: Model> Control<M> for InductionMotorVhzControl {
-    fn control(&mut self, drive: &mut M, w_m_ref: f32, t: f32) -> (f32, [f32; 3]) {
+    fn control(&mut self, drive: &mut M, w_m_ref: f32, t_s: f32) -> [f32; 3] {
         let i_s_abc = drive.phase_currents();
         let u_dc = drive.dc_bus_voltage();
-        self.control(i_s_abc, u_dc, w_m_ref, t)
+
+        // Rate limit the frequency reference
+        let w_m_ref = self.rate_limiter.rate_limit(t_s, w_m_ref);
+
+        // Space vector transformation
+        let i_s = Float::exp(-1. * self.theta_s) * abc_to_complex(i_s_abc);
+
+        // Slip compensation
+        let w_s_ref = w_m_ref + self.w_r_ref;
+
+        // Dynamic stator frequency and slip frequency
+        let [w_s, w_r] = self.stator_freq(w_s_ref, i_s.into());
+
+        // Voltage reference
+        let u_s_ref = self.voltage_reference(w_s, i_s);
+
+        // Compute the duty ratios
+        let d_abc_ref = self
+            .pwm
+            .duty_ratios(t_s, u_s_ref, u_dc, self.theta_s, w_s.re);
+
+        // Update the states
+        self.i_s_ref += t_s * self.alpha_i * (i_s - self.i_s_ref);
+        self.w_r_ref += t_s * self.alpha_f * (w_r - self.w_r_ref);
+
+        // Next line: limit into [-pi, pi)
+        self.theta_s += (t_s * w_s).re;
+        self.theta_s = (self.theta_s + PI) % (2. * PI) - PI;
+
+        d_abc_ref
     }
 }

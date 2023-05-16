@@ -27,6 +27,7 @@ pub struct Motor<M, C, V> {
     pub control: C,
     pub pwm: [V; 3],
     pub w_m_ref: f32,
+    pub is_armed: bool,
 }
 
 impl<M, C, V> Motor<M, C, V> {
@@ -37,10 +38,13 @@ impl<M, C, V> Motor<M, C, V> {
         V: PwmPin,
         V::Duty: FromPrimitive + ToPrimitive,
     {
-        let (_t_s, ratios) = self.control.control(&mut self.model, self.w_m_ref, t);
-        for (pwm, ratio) in self.pwm.iter_mut().zip(ratios) {
-            let duty = pwm.get_max_duty().to_f32().unwrap() * ratio;
+        if !self.is_armed {
+            todo!()
+        }
 
+        let duty_cycle_ratios = self.control.control(&mut self.model, self.w_m_ref, t);
+        for (pwm, duty_cycle_ratio) in self.pwm.iter_mut().zip(duty_cycle_ratios) {
+            let duty = pwm.get_max_duty().to_f32().unwrap() * duty_cycle_ratio;
             pwm.set_duty(V::Duty::from_f32(duty.round()).unwrap())
         }
     }
