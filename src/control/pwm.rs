@@ -1,9 +1,7 @@
 use crate::{abc_to_complex, complex_to_abc};
 use core::f32::consts::PI;
-use num::{
-    complex::{Complex32, ComplexFloat},
-    Zero,
-};
+use num_complex::{Complex32, ComplexFloat};
+use num_traits::{Float, Zero};
 
 /// Duty ratio references and realized voltage for three-phase PWM.
 /// This contains the computation of the duty ratio references and the realized voltage.
@@ -62,7 +60,7 @@ impl Pwm {
         let theta_comp = theta + 1.5 * t_s * w;
 
         // Voltage reference in stator coordinates
-        let mut u_s_ref = theta_comp.exp() * u_ref;
+        let mut u_s_ref = Float::exp(theta_comp) * u_ref;
 
         // Modify angle in the overmodulation region
         if self.is_six_step {
@@ -74,7 +72,7 @@ impl Pwm {
 
         // Realizable voltage
         let u_s_ref_lim = abc_to_complex(d_abc_ref) * u_dc;
-        let u_ref_lim = (-1. * theta_comp).exp() * u_s_ref_lim;
+        let u_ref_lim = Float::exp(-1. * theta_comp) * u_s_ref_lim;
 
         (d_abc_ref, u_ref_lim.into())
     }
@@ -90,7 +88,7 @@ pub fn six_step_overmodulation(u_s_ref: Complex32, u_dc: f32) -> Complex32 {
     // Limited magnitude
     let r = u_s_ref.abs().min(2. / 3. * u_dc);
 
-    if 3f32.sqrt() * r > u_dc {
+    if Float::sqrt(3.) * r > u_dc {
         // Angle and sector of the reference vector
         let theta = u_s_ref.arg();
         let sector = (3. * theta / PI).floor();
@@ -99,7 +97,7 @@ pub fn six_step_overmodulation(u_s_ref: Complex32, u_dc: f32) -> Complex32 {
         let mut theta0 = theta - sector * PI / 3.;
 
         // Intersection angle, see Eq. (9)
-        let alpha_g = PI / 6. - (u_dc / (3f32.sqrt() * r)).acos();
+        let alpha_g = PI / 6. - Float::acos(u_dc / (Float::sqrt(3.) * r));
 
         // Modify the angle according to Eq. (4)
         if alpha_g <= theta0 && theta0 <= PI / 6. {
@@ -109,7 +107,7 @@ pub fn six_step_overmodulation(u_s_ref: Complex32, u_dc: f32) -> Complex32 {
         }
 
         // Modified reference voltage
-        (r * (theta0 + sector * PI / 3.).exp()).into()
+        (r * Float::exp(theta0 + sector * PI / 3.)).into()
     } else {
         u_s_ref
     }

@@ -1,8 +1,8 @@
 #![no_std]
 
 use embedded_hal::PwmPin;
-use num::complex::Complex32;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_complex::Complex32;
+use num_traits::{Float, FromPrimitive, ToPrimitive};
 
 pub mod control;
 pub use control::Control;

@@ -4,10 +4,8 @@ use crate::{
     Control, Model,
 };
 use core::f32::consts::PI;
-use num::{
-    complex::{Complex32, ComplexFloat},
-    Zero,
-};
+use num_complex::{Complex32, ComplexFloat};
+use num_traits::{Float, Zero};
 
 pub struct Builder {
     r_r: f32,
@@ -141,7 +139,7 @@ impl InductionMotorVhzControl {
         let w_m_ref = self.rate_limiter.rate_limit(t_s, w_m_ref);
 
         // Space vector transformation
-        let i_s = (-1. * self.theta_s).exp() * abc_to_complex(i_s_abc);
+        let i_s = Float::exp(-1. * self.theta_s) * abc_to_complex(i_s_abc);
 
         // Slip compensation
         let w_s_ref = w_m_ref + self.w_r_ref;
@@ -172,7 +170,7 @@ impl InductionMotorVhzControl {
     pub fn stator_freq(&self, w_s_ref: Complex32, i_s: Complex32) -> [Complex32; 2] {
         // Operating-point quantities
         let psi_r_ref = self.psi_s_ref - self.l_sgm * self.i_s_ref;
-        let psi_r_ref_sqr = psi_r_ref.abs().powi(2);
+        let psi_r_ref_sqr = Float::powi(psi_r_ref.abs(), 2);
 
         // Compute the dynamic stator frequency
         if psi_r_ref_sqr > 0. {
