@@ -9,7 +9,7 @@ base = mt.BaseValues(
 
 class Control(mt.InductionMotorVHzCtrl):
     def __init__(self):
-        self.controller = ExampleClass();
+        self.controller = ExampleClass()
         super().__init__(mt.InductionMotorVHzCtrlPars(R_s=0, R_R=0, k_u=0, k_w=0))
 
     def __call__(self, mdl):

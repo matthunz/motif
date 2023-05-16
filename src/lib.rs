@@ -1,6 +1,7 @@
 use num::complex::Complex32;
 
 pub mod induction;
+pub use induction::InductionMotorVhzControl;
 
 pub mod pwm;
 pub use pwm::Pwm;
