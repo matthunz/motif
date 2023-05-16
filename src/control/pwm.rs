@@ -1,9 +1,9 @@
 use crate::{abc_to_complex, complex_to_abc};
+use core::f32::consts::PI;
 use num::{
     complex::{Complex32, ComplexFloat},
     Zero,
 };
-use std::f32::consts::PI;
 
 /// Duty ratio references and realized voltage for three-phase PWM.
 /// This contains the computation of the duty ratio references and the realized voltage.

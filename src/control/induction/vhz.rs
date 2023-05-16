@@ -1,6 +1,13 @@
-use crate::{abc_to_complex, Pwm, RateLimiter};
-use num::{complex::{Complex32, ComplexFloat}, Zero};
-use std::f32::consts::PI;
+use crate::{
+    abc_to_complex,
+    control::{Pwm, RateLimiter},
+    Control, Model,
+};
+use core::f32::consts::PI;
+use num::{
+    complex::{Complex32, ComplexFloat},
+    Zero,
+};
 
 pub struct Builder {
     r_r: f32,
@@ -39,10 +46,10 @@ impl Builder {
         InductionMotorVhzControl {
             i_s_ref: Complex32::zero(),
             psi_s_ref: Complex32::new(1.04, 1.), // 1 p.u
+            w_r_ref: Complex32::zero(),
             l_sgm: self.l_sgm,
             r_r: self.r_r,
             k_w: Complex32::new(4., 1.),
-            w_r_ref: Complex32::zero(),
             rate_limiter: RateLimiter::new(2. * PI * 120.),
             theta_s: 0.,
             pwm: Pwm::default(),
@@ -64,24 +71,12 @@ pub struct InductionMotorVhzControl {
     /// PWM duty cycle control.
     pub pwm: Pwm,
 
-    /// Reference stator current
-    pub i_s_ref: Complex32,
-
-    /// Reference stator flux
-    pub psi_s_ref: Complex32,
-
     /// Stator inductance
     pub l_sgm: f32,
 
     pub k_w: Complex32,
 
     pub k_u: f32,
-
-    /// Reference rotor speed
-    pub w_r_ref: Complex32,
-
-    /// Angle of stator flux
-    pub theta_s: f32,
 
     /// Magnetizing inductance
     pub l_m: f32,
@@ -92,14 +87,26 @@ pub struct InductionMotorVhzControl {
     /// Rotor resistance
     pub r_r: f32,
 
+    // Last recorded time
+    t: f32,
+
+    /// Reference rotor speed
+    w_r_ref: Complex32,
+
+    /// Reference stator current
+    i_s_ref: Complex32,
+
+    /// Reference stator flux
+    psi_s_ref: Complex32,
+
+    /// Angle of stator flux
+    theta_s: f32,
+
     /// Proportional gain for the stator current controller.
-    pub alpha_i: f32,
+    alpha_i: f32,
 
     /// Proportional gain for the stator flux controller.
-    pub alpha_f: f32,
-
-    // Last recorded time
-    pub t: f32,
+    alpha_f: f32,
 }
 
 impl Default for InductionMotorVhzControl {
@@ -193,5 +200,13 @@ impl InductionMotorVhzControl {
         let k = self.k_u * self.l_sgm * (self.r_r / self.l_m + 1. * w_s);
 
         self.r_s * i_s_ref0 + 1. * w_s * self.psi_s_ref + k * (self.i_s_ref - i_s)
+    }
+}
+
+impl<M: Model> Control<M> for InductionMotorVhzControl {
+    fn control(&mut self, drive: &mut M, w_m_ref: f32, t: f32) -> (f32, [f32; 3]) {
+        let i_s_abc = drive.phase_currents();
+        let u_dc = drive.dc_bus_voltage();
+        self.control(i_s_abc, u_dc, w_m_ref, t)
     }
 }
