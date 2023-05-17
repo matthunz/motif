@@ -36,8 +36,7 @@ fn main() -> ! {
     for channel in channels {
         pwm.enable(channel);
     }
-    let mut drive = MotorDrive::new(pwm, channels);
-    drive.drive([1.; 3]);
+    let drive = MotorDrive::new(pwm, channels);
 
     let adc1 = Adc::adc1(peripherals.ADC1, clocks);
 
@@ -75,7 +74,7 @@ fn main() -> ! {
         from_min: 0.,
         from_max: 1.,
         to_min: 0.,
-        to_max: 24.,
+        to_max: 12.,
     };
     let model = MotorModel::<_, _, _, _, _, _, u16>::new(adc1, (a, b, c), d);
 

@@ -1,8 +1,7 @@
-use core::marker::PhantomData;
 use embedded_hal::adc::{Channel, OneShot};
 use num_traits::ToPrimitive;
 
-pub struct AnalogSensor<P> {
+pub struct Sensor<P> {
     pub pin: P,
     pub from_min: f32,
     pub from_max: f32,
@@ -10,7 +9,7 @@ pub struct AnalogSensor<P> {
     pub to_max: f32,
 }
 
-impl<P> AnalogSensor<P> {
+impl<P> Sensor<P> {
     pub fn read<T, A, W>(&mut self, adc: &mut T) -> f32
     where
         T: OneShot<A, W, P>,

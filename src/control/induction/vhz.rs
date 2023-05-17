@@ -56,7 +56,6 @@ impl Builder {
             r_s: 3.7,
             alpha_i: 0.1 * w_rb,
             alpha_f: 0.1 * w_rb,
-            t: 0.,
         }
     }
 }
@@ -84,9 +83,6 @@ pub struct InductionMotorVhzControl {
 
     /// Rotor resistance
     pub r_r: f32,
-
-    // Last recorded time
-    t: f32,
 
     /// Reference rotor speed
     w_r_ref: Complex32,

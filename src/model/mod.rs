@@ -1,9 +1,9 @@
-mod sensor;
 use core::marker::PhantomData;
-
 use embedded_hal::adc::{Channel, OneShot};
 use num_traits::ToPrimitive;
-pub use sensor::AnalogSensor;
+
+mod sensor;
+pub use sensor::Sensor;
 
 pub trait Model {
     fn phase_currents(&mut self) -> [f32; 3];
@@ -17,16 +17,16 @@ pub trait SensoredModel {
 
 pub struct MotorModel<T, X, Y, Z, U, A, W> {
     adc: T,
-    phase_current_sensors: (AnalogSensor<X>, AnalogSensor<Y>, AnalogSensor<Z>),
-    dc_bus_sensor: AnalogSensor<U>,
+    phase_current_sensors: (Sensor<X>, Sensor<Y>, Sensor<Z>),
+    dc_bus_sensor: Sensor<U>,
     _marker: PhantomData<(A, W)>,
 }
 
 impl<T, X, Y, Z, U, A, W> MotorModel<T, X, Y, Z, U, A, W> {
     pub fn new(
         adc: T,
-        phase_current_sensors: (AnalogSensor<X>, AnalogSensor<Y>, AnalogSensor<Z>),
-        dc_bus_sensor: AnalogSensor<U>,
+        phase_current_sensors: (Sensor<X>, Sensor<Y>, Sensor<Z>),
+        dc_bus_sensor: Sensor<U>,
     ) -> Self {
         Self {
             adc,
