@@ -1,0 +1,22 @@
+[package]
+name = "motif-example"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+motif = { path = "../" }
+stm32f1xx-hal = { version = "0.10", features = ["rt", "stm32f103" ] }
+cortex-m = "0.7"
+cortex-m-rt = { version = "0.7", features = ["device"] }
+panic-halt = "0.2.0"
+
+[[bin]]
+name = "motif-example"
+test = false
+bench = false
+
+[profile.release]
+codegen-units = 1 # better optimizations
+lto = true # better optimizations
+opt-level = "z"
+
