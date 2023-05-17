@@ -1,5 +1,9 @@
 mod sensor;
-pub use sensor::{AnalogSensor, Sensor};
+use core::marker::PhantomData;
+
+use embedded_hal::adc::{Channel, OneShot};
+use num_traits::ToPrimitive;
+pub use sensor::AnalogSensor;
 
 pub trait Model {
     fn phase_currents(&mut self) -> [f32; 3];
@@ -11,25 +15,47 @@ pub trait SensoredModel {
     fn speed(&self) -> f32;
 }
 
-pub struct MotorModel<T, U> {
-    phase_current_sensors: [T; 3],
-    dc_bus_sensor: U,
+pub struct MotorModel<T, X, Y, Z, U, A, W> {
+    adc: T,
+    phase_current_sensors: (AnalogSensor<X>, AnalogSensor<Y>, AnalogSensor<Z>),
+    dc_bus_sensor: AnalogSensor<U>,
+    _marker: PhantomData<(A, W)>,
 }
 
-impl<T, U> Model for MotorModel<T, U>
+impl<T, X, Y, Z, U, A, W> MotorModel<T, X, Y, Z, U, A, W> {
+    pub fn new(
+        adc: T,
+        phase_current_sensors: (AnalogSensor<X>, AnalogSensor<Y>, AnalogSensor<Z>),
+        dc_bus_sensor: AnalogSensor<U>,
+    ) -> Self {
+        Self {
+            adc,
+            phase_current_sensors,
+            dc_bus_sensor,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<T, X, Y, Z, U, A, W> Model for MotorModel<T, X, Y, Z, U, A, W>
 where
-    T: Sensor,
-    U: Sensor,
+    T: OneShot<A, W, X> + OneShot<A, W, Y> + OneShot<A, W, Z> + OneShot<A, W, U>,
+    X: Channel<A>,
+    Y: Channel<A>,
+    Z: Channel<A>,
+    U: Channel<A>,
+    W: ToPrimitive,
 {
     fn phase_currents(&mut self) -> [f32; 3] {
+        let (x, y, z) = &mut self.phase_current_sensors;
         [
-            self.phase_current_sensors[0].read(),
-            self.phase_current_sensors[1].read(),
-            self.phase_current_sensors[2].read(),
+            x.read(&mut self.adc),
+            y.read(&mut self.adc),
+            z.read(&mut self.adc),
         ]
     }
 
     fn dc_bus_voltage(&mut self) -> f32 {
-        self.dc_bus_sensor.read()
+        self.dc_bus_sensor.read(&mut self.adc)
     }
 }
